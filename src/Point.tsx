@@ -1,5 +1,5 @@
-import React, { useCallback, useEffect, useRef, useState } from 'react';
-import { Button, Card, Slider, Select, Switch } from 'antd';
+import React from 'react';
+// import { Button, Card, Slider, Select, Switch } from 'antd';
 
 // 🎯 Компонент прицела
 export const CSCrosshair: React.FC<{ style: string; isVisible: boolean }> = ({ style, isVisible }) => {
