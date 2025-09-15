@@ -267,7 +267,7 @@ export const GameCanvas: React.FC<GameCanvasProps> = ({
             const x = (e.clientX - rect.left) * (canvas.width / rect.width);
             const y = (e.clientY - rect.top) * (canvas.height / rect.height);
 
-            let hit = false;
+            // let hit = false;
             let hitTargetIndex = -1;
 
             targetsRef.current.forEach((target, index) => {
@@ -278,7 +278,7 @@ export const GameCanvas: React.FC<GameCanvasProps> = ({
                 const headDist = Math.sqrt(headDx * headDx + headDy * headDy);
 
                 if (headDist <= target.headSize) {
-                    hit = true;
+                    // hit = true;
                     hitTargetIndex = index;
                     playCSSound('headshot');
                     createHitEffect(target.headX, target.headY, true);
@@ -292,7 +292,7 @@ export const GameCanvas: React.FC<GameCanvasProps> = ({
                     y >= target.y - target.height &&
                     y <= target.y
                 ) {
-                    hit = true;
+                    // hit = true;
                     hitTargetIndex = index;
                     playCSSound('hit');
                     createHitEffect(target.x, target.y - target.height / 2, false);
