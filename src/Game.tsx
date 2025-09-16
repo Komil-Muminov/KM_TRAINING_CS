@@ -296,7 +296,7 @@ export const GameCanvas: React.FC<GameCanvasProps> = ({
             let hitTargetIndex = -1;
             let isHeadshot = false;
             console.log(isHeadshot);
-            targetsRef.current.forEach((target, index) => {
+            targetsRef?.current.forEach((target, index) => {
                 if (target.bodyHit) return;
 
                 const headDx = x - target.headX;
