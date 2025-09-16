@@ -103,7 +103,7 @@ export const CS16HeadshotTrainer: React.FC = () => {
 
     return (
         <div
-            className="flex flex-col items-center gap-4 p-4 bg-gray-900 min-h-screen text-white"
+            className="flex gap-3 items-center p-4 bg-gray-900 min-h-screen text-white"
             style={{ fontFamily: 'monospace' }}
         >
             <ControlPanel
