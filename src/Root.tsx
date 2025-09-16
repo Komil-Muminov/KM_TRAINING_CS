@@ -102,10 +102,7 @@ export const CS16HeadshotTrainer: React.FC = () => {
     }, [resetStats]);
 
     return (
-        <div
-            className="flex gap-3 items-center p-4 bg-gray-900 min-h-screen text-white"
-            style={{ fontFamily: 'monospace' }}
-        >
+        <div className="flex items-center p-4 bg-gray-900 min-h-screen text-white" style={{ fontFamily: 'monospace' }}>
             <ControlPanel
                 running={running}
                 headshotKills={headshotKills}
