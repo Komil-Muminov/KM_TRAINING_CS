@@ -1,7 +1,7 @@
-import { useCallback, useEffect, useState } from "react";
-import { CSCrosshair } from "./Point";
-import { ControlPanel } from "./Panel";
-import { GameCanvas } from "./Game";
+import { useCallback, useEffect, useState } from 'react';
+import { GameCanvas } from './Game';
+// import { CSCrosshair } from './Point';
+import { ControlPanel } from './Panel';
 
 // 🎮 Главный компонент
 export const CS16HeadshotTrainer: React.FC = () => {
@@ -12,41 +12,36 @@ export const CS16HeadshotTrainer: React.FC = () => {
     const [round, setRound] = useState(1);
     const [timer, setTimer] = useState(120);
     const [crosshairStyle, setCrosshairStyle] = useState('default');
-    const [gameMode, setGameMode] = useState<'aim' | 'flick' | 'tracking'>('aim');
+    const [gameMode, setGameMode] = useState<'aim' | 'flick' | 'tracking' | 'headshot-only'>('aim');
     const [sensitivity, setSensitivity] = useState(2.0);
     const [soundEnabled, setSoundEnabled] = useState(true);
     const [showFPS, setShowFPS] = useState(false);
+    const [distanceMode, setDistanceMode] = useState(false);
 
-    // Загрузка/сохранение настроек
-    useEffect(() => {
-        const saved = localStorage.getItem('cs16trainer');
-        if (saved) {
-            const data = JSON.parse(saved);
-            setCrosshairStyle(data.crosshairStyle || 'default');
-            setSensitivity(data.sensitivity || 2.0);
-            setSoundEnabled(data.soundEnabled !== false);
-            setShowFPS(data.showFPS || false);
-        }
-    }, []);
-
-    useEffect(() => {
-        const data = {
-            crosshairStyle,
-            sensitivity,
-            soundEnabled,
-            showFPS,
-        };
-        localStorage.setItem('cs16trainer', JSON.stringify(data));
-    }, [crosshairStyle, sensitivity, soundEnabled, showFPS]);
+    // Загрузка/сохранение настроек (убираем localStorage для Claude.ai)
+    // const data = {
+    //     crosshairStyle,
+    //     sensitivity,
+    //     soundEnabled,
+    //     showFPS,
+    //     distanceMode,
+    //     gameMode,
+    // };
 
     // Обработчики событий
-    const handleHit = useCallback((isHeadshot: boolean) => {
-        if (isHeadshot) {
-            setHeadshotKills((prev) => prev + 1);
-        } else {
-            setBodyKills((prev) => prev + 1);
-        }
-    }, []);
+    const handleHit = useCallback(
+        (isHeadshot: boolean) => {
+            if (isHeadshot) {
+                setHeadshotKills((prev) => prev + 1);
+            } else {
+                // В режиме "только хедшоты" попадания в тело не засчитываются
+                if (gameMode !== 'headshot-only') {
+                    setBodyKills((prev) => prev + 1);
+                }
+            }
+        },
+        [gameMode],
+    );
 
     const handleMiss = useCallback(() => {
         setMisses((prev) => prev + 1);
@@ -93,6 +88,12 @@ export const CS16HeadshotTrainer: React.FC = () => {
             } else if (e.code === 'KeyF' && e.ctrlKey) {
                 e.preventDefault();
                 setShowFPS((prev) => !prev);
+            } else if (e.code === 'KeyH') {
+                e.preventDefault();
+                setGameMode((prev) => (prev === 'headshot-only' ? 'aim' : 'headshot-only'));
+            } else if (e.code === 'KeyD') {
+                e.preventDefault();
+                setDistanceMode((prev) => !prev);
             }
         };
 
@@ -117,6 +118,7 @@ export const CS16HeadshotTrainer: React.FC = () => {
                 sensitivity={sensitivity}
                 soundEnabled={soundEnabled}
                 showFPS={showFPS}
+                distanceMode={distanceMode}
                 onStart={handleStart}
                 onReset={resetStats}
                 onGameModeChange={setGameMode}
@@ -124,6 +126,7 @@ export const CS16HeadshotTrainer: React.FC = () => {
                 onSensitivityChange={setSensitivity}
                 onSoundToggle={setSoundEnabled}
                 onFPSToggle={setShowFPS}
+                onDistanceModeToggle={setDistanceMode}
             />
 
             <GameCanvas
@@ -134,9 +137,10 @@ export const CS16HeadshotTrainer: React.FC = () => {
                 onMiss={handleMiss}
                 soundEnabled={soundEnabled}
                 showFPS={showFPS}
+                distanceMode={distanceMode}
             />
 
-            <CSCrosshair style={crosshairStyle} isVisible={running} />
+            {/* <CSCrosshair style={crosshairStyle} isVisible={running} /> */}
         </div>
     );
 };

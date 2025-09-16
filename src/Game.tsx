@@ -1,12 +1,15 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
+
+// Компонент игрового поля
 interface GameCanvasProps {
     running: boolean;
-    gameMode: 'aim' | 'flick' | 'tracking';
+    gameMode: 'aim' | 'flick' | 'tracking' | 'headshot-only';
     round: number;
     onHit: (isHeadshot: boolean) => void;
     onMiss: () => void;
     soundEnabled: boolean;
     showFPS: boolean;
+    distanceMode: boolean;
 }
 
 export const GameCanvas: React.FC<GameCanvasProps> = ({
@@ -17,6 +20,7 @@ export const GameCanvas: React.FC<GameCanvasProps> = ({
     onMiss,
     soundEnabled,
     showFPS,
+    distanceMode,
 }) => {
     const canvasRef = useRef<HTMLCanvasElement | null>(null);
     const animationRef = useRef<number>();
@@ -39,6 +43,7 @@ export const GameCanvas: React.FC<GameCanvasProps> = ({
         headY: number;
         headSize: number;
         bodyHit: boolean;
+        distance: number; // 0.5 - 2.0 (множитель размера)
     }
 
     interface Particle {
@@ -130,9 +135,16 @@ export const GameCanvas: React.FC<GameCanvasProps> = ({
         const stance = Math.random() > 0.7 ? 'crouching' : 'standing';
         const moving = gameMode === 'tracking' || (gameMode === 'aim' && Math.random() > 0.6);
 
-        const width = 25;
-        const height = stance === 'crouching' ? 45 : 65;
-        const headSize = 12;
+        // Дистанция влияет на размер цели
+        const distance = distanceMode ? rand(0.4, 1.8) : 1.0;
+
+        const baseWidth = 25;
+        const baseHeight = stance === 'crouching' ? 45 : 65;
+        const baseHeadSize = 12;
+
+        const width = baseWidth * distance;
+        const height = baseHeight * distance;
+        const headSize = baseHeadSize * distance;
 
         const target: CSTarget = {
             x: rand(width, canvas.width - width),
@@ -149,13 +161,14 @@ export const GameCanvas: React.FC<GameCanvasProps> = ({
             headY: 0,
             headSize,
             bodyHit: false,
+            distance,
         };
 
         target.headX = target.x;
         target.headY = target.y - target.height * 0.35;
 
         targetsRef.current.push(target);
-    }, [gameMode]);
+    }, [gameMode, distanceMode]);
 
     const spawnCSTargets = useCallback(() => {
         targetsRef.current = [];
@@ -218,9 +231,22 @@ export const GameCanvas: React.FC<GameCanvasProps> = ({
                 ctx.arc(target.headX, target.headY, target.headSize, 0, Math.PI * 2);
                 ctx.fill();
 
-                ctx.strokeStyle = 'rgba(255,0,0,0.5)';
-                ctx.lineWidth = 1;
+                // Хитбокс головы (всегда видимый в режиме headshot-only)
+                ctx.strokeStyle = gameMode === 'headshot-only' ? 'rgba(255,0,0,0.8)' : 'rgba(255,0,0,0.5)';
+                ctx.lineWidth = gameMode === 'headshot-only' ? 2 : 1;
                 ctx.stroke();
+
+                // Индикатор дистанции
+                if (distanceMode) {
+                    const distanceText = target.distance < 0.7 ? 'FAR' : target.distance > 1.3 ? 'CLOSE' : 'MID';
+                    const distanceColor =
+                        target.distance < 0.7 ? '#FF6B6B' : target.distance > 1.3 ? '#4ECDC4' : '#FFE66D';
+
+                    ctx.fillStyle = distanceColor;
+                    ctx.font = `${8 * target.distance}px monospace`;
+                    ctx.textAlign = 'center';
+                    ctx.fillText(distanceText, target.x, target.y + 20);
+                }
 
                 ctx.globalAlpha = 1;
 
@@ -255,7 +281,7 @@ export const GameCanvas: React.FC<GameCanvasProps> = ({
         if (running) {
             animationRef.current = requestAnimationFrame(draw);
         }
-    }, [running, gameMode, updateFPS, onMiss]);
+    }, [running, gameMode, updateFPS, onMiss, distanceMode]);
 
     const handleClick = useCallback(
         (e: React.MouseEvent) => {
@@ -267,8 +293,8 @@ export const GameCanvas: React.FC<GameCanvasProps> = ({
             const x = (e.clientX - rect.left) * (canvas.width / rect.width);
             const y = (e.clientY - rect.top) * (canvas.height / rect.height);
 
-            // let hit = false;
             let hitTargetIndex = -1;
+            let isHeadshot = false;
 
             targetsRef.current.forEach((target, index) => {
                 if (target.bodyHit) return;
@@ -278,11 +304,16 @@ export const GameCanvas: React.FC<GameCanvasProps> = ({
                 const headDist = Math.sqrt(headDx * headDx + headDy * headDy);
 
                 if (headDist <= target.headSize) {
-                    // hit = true;
                     hitTargetIndex = index;
+                    isHeadshot = true;
                     playCSSound('headshot');
                     createHitEffect(target.headX, target.headY, true);
                     onHit(true);
+                    return;
+                }
+
+                // В режиме "только хедшоты" попадания в тело игнорируются
+                if (gameMode === 'headshot-only') {
                     return;
                 }
 
@@ -292,8 +323,8 @@ export const GameCanvas: React.FC<GameCanvasProps> = ({
                     y >= target.y - target.height &&
                     y <= target.y
                 ) {
-                    // hit = true;
                     hitTargetIndex = index;
+                    isHeadshot = false;
                     playCSSound('hit');
                     createHitEffect(target.x, target.y - target.height / 2, false);
                     onHit(false);
@@ -309,7 +340,7 @@ export const GameCanvas: React.FC<GameCanvasProps> = ({
                     targetsRef.current = targetsRef.current.filter((t) => t !== target);
                     spawnSingleTarget();
                 } else {
-                    // В режимах aim и tracking удаляем цель
+                    // В других режимах удаляем цель
                     targetsRef.current = targetsRef.current.filter((t) => t !== target);
                     spawnSingleTarget(); // И создаем новую, чтобы количество целей оставалось постоянным
                 }
